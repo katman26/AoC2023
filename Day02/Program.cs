@@ -2,7 +2,7 @@
 using System.Drawing;
 using System.Text;
 
-(int id, bool valid) parseLine(string line)
+(int id, bool valid) parseLineValid(string line)
 {
     (int id, bool valid) toReturn = (id: 0, valid: false);
     if(!string.IsNullOrEmpty(line))
@@ -12,6 +12,20 @@ using System.Text;
         {
             toReturn.id = getGameId(split[0]);
             toReturn.valid = isGameValid(split[1]);
+        }
+    }
+    return toReturn;
+}
+
+int parseLinePower(string line)
+{
+    int toReturn = 0;
+    if (!string.IsNullOrEmpty(line))
+    {
+        string[] split = line.Split(':');
+        if (split.Length > 1)
+        {
+            toReturn = getLinePower(split[1]);
         }
     }
     return toReturn;
@@ -28,9 +42,10 @@ int getGameId(string linePrefix)
 }
 
 bool isGameValid(string lineSuffix) => lineSuffix.Trim().Split(";").All(s => isSubsetValid(s.Trim()));
-bool isSubsetValid(string subset)
+
+IDictionary<string, int> getColorCounts(string subset)
 {
-    IDictionary<string, int> colorCount = new Dictionary<string, int>()
+    IDictionary<string, int> toReturn = new Dictionary<string, int>()
     {
         { "red", 0 },
         { "green", 0 },
@@ -41,7 +56,7 @@ bool isSubsetValid(string subset)
     {
         if (input.Contains(color))
         {
-            colorCount[color] = int.Parse(input.Replace(color, "").Trim());
+            toReturn[color] = int.Parse(input.Replace(color, "").Trim());
         }
     }
 
@@ -53,17 +68,58 @@ bool isSubsetValid(string subset)
         setColorCount(colorCubes, "blue");
     }
 
+    return toReturn;
+}
+
+bool isSubsetValid(string subset)
+{
+    IDictionary<string, int> colorCount = getColorCounts(subset);
+
     return colorCount["red"] <= 12
         && colorCount["green"] <= 13
         && colorCount["blue"] <= 14;
 }
 
-int sum = File.ReadAllLines("input.txt")
+int getLinePower(string lineSuffix)
+{
+    IDictionary<string, int> lineColorMaxValues = new Dictionary<string, int>()
+    {
+        { "red", 0 },
+        { "green", 0 },
+        { "blue", 0 }
+    };
+
+    void setMaxValue(string color, IDictionary<string, int> colorCounts)
+    {
+        if (colorCounts[color] > lineColorMaxValues[color])
+        {
+            lineColorMaxValues[color] = colorCounts[color];
+        }
+    }
+
+    foreach(string subset in lineSuffix.Trim().Split(";"))
+    {
+        IDictionary<string, int> colorCounts = getColorCounts(subset);
+        setMaxValue("red", colorCounts);
+        setMaxValue("green", colorCounts);
+        setMaxValue("blue", colorCounts);
+    }
+
+    return lineColorMaxValues["red"] * lineColorMaxValues["green"] * lineColorMaxValues["blue"];
+}
+
+int sumValid = File.ReadAllLines("input.txt")
     .Where(l => !string.IsNullOrEmpty(l))
-    .Select(l => parseLine(l))
+    .Select(l => parseLineValid(l))
     .Where(x => x.valid)
     .Select(x => x.id)
     .Sum();
 
-Console.WriteLine($"Part 1: {sum}");
+int sumPowers = File.ReadAllLines("input.txt")
+    .Where(l => !string.IsNullOrEmpty(l))
+    .Select(l => parseLinePower(l))
+    .Sum();
+
+Console.WriteLine($"Part 1: {sumValid}");
+Console.WriteLine($"Part 2: {sumPowers}");
 Console.ReadLine();
